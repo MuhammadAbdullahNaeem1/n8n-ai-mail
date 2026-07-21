@@ -1,0 +1,74 @@
+volumes:
+  n8n_data:
+  postgres_data:
+  qdrant_data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-n8n}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-n8n}
+      POSTGRES_DB: ${POSTGRES_DB:-n8n}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-n8n}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_DATABASE: ${POSTGRES_DB:-n8n}
+      DB_POSTGRESDB_USER: ${POSTGRES_USER:-n8n}
+      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD:-n8n}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      WEBHOOK_URL: ${WEBHOOK_URL:-http://localhost:5678/}
+      GENERIC_TIMEZONE: ${TZ:-Asia/Karachi}
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      # Allow Read/Write File nodes to reach the mounted seed/output dirs
+      N8N_RESTRICT_FILE_ACCESS_TO: /data
+      # Allow Code nodes to read $env (LLM_*, QDRANT_URL) in task-runner mode
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      # LLM config is read by workflow nodes via expressions
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL_CLASSIFY: ${LLM_MODEL_CLASSIFY}
+      LLM_MODEL_DRAFT: ${LLM_MODEL_DRAFT}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      QDRANT_URL: http://qdrant:6333
+      # Smoke-test mode: process only the first N seed emails (0/unset = all 24).
+      # ~14 API calls at 6 vs ~56 at full — keeps free-tier quota intact while iterating.
+      DEMO_SAMPLE_SIZE: ${DEMO_SAMPLE_SIZE:-0}
+      # Gmail variant: which messages to touch, and how many per run.
+      # Narrow by default — this runs against a real inbox.
+      GMAIL_QUERY: ${GMAIL_QUERY:-is:unread newer_than:1d}
+      GMAIL_FETCH_LIMIT: ${GMAIL_FETCH_LIMIT:-5}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./seed:/data/seed:ro
+      - ./output:/data/output
+      - ./workflows:/data/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started

@@ -1,0 +1,284 @@
+{
+  "name": "AI Inbox Manager \u2014 KB Ingest (docs \u2192 Qdrant)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Run Ingest",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/seed/knowledge-base/*.md",
+        "options": {}
+      },
+      "id": "read-docs",
+      "name": "Read KB Docs",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "id": "extract-text",
+      "name": "Extract Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Chunk each doc by section headings (## ...), splitting oversized sections at ~1200 chars.\nconst chunks = [];\nconst inputs = $input.all();\nconst srcItems = $('Read KB Docs').all(); // Extract Text drops binary, so read filenames here\nfor (let i = 0; i < inputs.length; i++) {\n  const item = inputs[i];\n  const text = item.json.data || '';\n  const bin = srcItems[i]?.binary ? Object.values(srcItems[i].binary)[0] : null;\n  const source = (bin?.fileName || `doc-${i + 1}`).replace(/^.*\\//, '');\n  const sections = text.split(/\\n(?=## )/);\n  const docTitle = (text.match(/^# (.+)$/m) || [])[1] || source;\n  for (const section of sections) {\n    const trimmed = section.trim();\n    if (!trimmed) continue;\n    // split long sections into ~1200-char pieces at paragraph boundaries\n    if (trimmed.length <= 1500) {\n      chunks.push({ source, text: `${docTitle}\\n\\n${trimmed}` });\n    } else {\n      let buf = '';\n      for (const para of trimmed.split(/\\n\\n+/)) {\n        if (buf.length + para.length > 1200 && buf) {\n          chunks.push({ source, text: `${docTitle}\\n\\n${buf.trim()}` });\n          buf = '';\n        }\n        buf += para + '\\n\\n';\n      }\n      if (buf.trim()) chunks.push({ source, text: `${docTitle}\\n\\n${buf.trim()}` });\n    }\n  }\n}\nreturn [{ json: { chunks, body: { model: $env.EMBEDDING_MODEL, input: chunks.map(c => c.text) } } }];"
+      },
+      "id": "chunk-docs",
+      "name": "Chunk Docs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LLM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "embed-chunks",
+      "name": "Embed Chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -200,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const chunks = $('Chunk Docs').item.json.chunks;\nconst embeddings = $json.data; // [{index, embedding}]\nif (!embeddings?.length) throw new Error('Embedding response contained no data \u2014 check EMBEDDING_MODEL and LLM_BASE_URL');\nconst points = embeddings.map((e, i) => {\n  const idx = e.index ?? i; // Gemini's OpenAI-compat endpoint omits index; order is guaranteed\n  return { id: idx, vector: e.embedding, payload: { source: chunks[idx].source, text: chunks[idx].text } };\n});\nreturn { json: { vector_size: embeddings[0].embedding.length, points, chunk_count: points.length } };"
+      },
+      "id": "build-points",
+      "name": "Build Points",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{ $env.QDRANT_URL }}/collections/flowdesk_kb",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "drop-collection",
+      "name": "Drop Old Collection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        200,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.QDRANT_URL }}/collections/flowdesk_kb",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ vectors: { size: $('Build Points').item.json.vector_size, distance: 'Cosine' } }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "create-collection",
+      "name": "Create Collection",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $env.QDRANT_URL }}/collections/flowdesk_kb/points?wait=true",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ points: $('Build Points').item.json.points }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "upsert-points",
+      "name": "Upsert Points",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "return { json: { status: 'ok', collection: 'flowdesk_kb', chunks_indexed: $('Build Points').item.json.chunk_count, vector_size: $('Build Points').item.json.vector_size } };"
+      },
+      "id": "summary",
+      "name": "Ingest Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Run Ingest": {
+      "main": [
+        [
+          {
+            "node": "Read KB Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read KB Docs": {
+      "main": [
+        [
+          {
+            "node": "Extract Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Text": {
+      "main": [
+        [
+          {
+            "node": "Chunk Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk Docs": {
+      "main": [
+        [
+          {
+            "node": "Embed Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed Chunks": {
+      "main": [
+        [
+          {
+            "node": "Build Points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Points": {
+      "main": [
+        [
+          {
+            "node": "Drop Old Collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drop Old Collection": {
+      "main": [
+        [
+          {
+            "node": "Create Collection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Collection": {
+      "main": [
+        [
+          {
+            "node": "Upsert Points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Points": {
+      "main": [
+        [
+          {
+            "node": "Ingest Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "0cdd3n0x3fCchf7k"
+}

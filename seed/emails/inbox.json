@@ -1,0 +1,200 @@
+[
+  {
+    "id": "m001",
+    "from": "sarah.linton@brightpath.io",
+    "subject": "Pricing for 25 seats?",
+    "body": "Hi,\n\nWe're evaluating tools for our support team (25 agents). Can you send over pricing for an annual plan? We'd need SSO and priority support. Hoping to decide by end of month.\n\nBest,\nSarah Linton\nHead of CX, BrightPath",
+    "received_at": "2026-07-20T08:12:00Z",
+    "expected_category": "sales_inquiry"
+  },
+  {
+    "id": "m002",
+    "from": "mike.j.turner@gmail.com",
+    "subject": "CANNOT LOG IN - 3rd email!!",
+    "body": "This is the third time I'm writing. I reset my password twice and I still get 'invalid credentials'. I have a client presentation tomorrow morning and I NEED access to my files. If this isn't fixed today I want a refund.\n\nMike",
+    "received_at": "2026-07-20T08:47:00Z",
+    "expected_category": "support",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m003",
+    "from": "billing@cloudstack-hosting.com",
+    "subject": "Your invoice #INV-88231 is ready",
+    "body": "Your monthly invoice for July is now available in your dashboard. Amount due: $340.00. Payment will be auto-collected on July 25.",
+    "received_at": "2026-07-20T09:02:00Z",
+    "expected_category": "billing"
+  },
+  {
+    "id": "m004",
+    "from": "newsletter@saasweekly.co",
+    "subject": "🚀 10 growth tactics you missed this week",
+    "body": "This week in SaaS: pricing page teardowns, a churn case study, and why onboarding emails still work. Read online. Unsubscribe.",
+    "received_at": "2026-07-20T09:15:00Z",
+    "expected_category": "newsletter"
+  },
+  {
+    "id": "m005",
+    "from": "dana@ravencreative.agency",
+    "subject": "Re: collaboration proposal",
+    "body": "Hey! Following up on my last email — we run a design agency and several of our clients need exactly what you offer. Would you be open to a referral partnership? Happy to jump on a 15-min call this week.\n\nDana",
+    "received_at": "2026-07-20T09:33:00Z",
+    "expected_category": "partnership"
+  },
+  {
+    "id": "m006",
+    "from": "carlos.m@vertexlabs.dev",
+    "subject": "API webhook stopped firing since yesterday",
+    "body": "Hi team,\n\nOur integration stopped receiving webhook events around 14:00 UTC yesterday. No changes on our side. Endpoint returns 200 on manual test. Can you check if events are being dispatched for account ID vx-2291?\n\nThanks,\nCarlos",
+    "received_at": "2026-07-20T10:05:00Z",
+    "expected_category": "support",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m007",
+    "from": "no-reply@linkedin.com",
+    "subject": "You have 4 new invitations",
+    "body": "You have new invitations waiting. See who wants to connect with you.",
+    "received_at": "2026-07-20T10:11:00Z",
+    "expected_category": "notification"
+  },
+  {
+    "id": "m008",
+    "from": "jenny.walsh@outlook.com",
+    "subject": "question before I buy",
+    "body": "hi, does your tool work with Shopify? and can I import my existing customer list from a csv? that's basically all I need. thanks, jenny",
+    "received_at": "2026-07-20T10:40:00Z",
+    "expected_category": "sales_inquiry"
+  },
+  {
+    "id": "m009",
+    "from": "accounts@meridianlegal.co.uk",
+    "subject": "Duplicate charge on July statement",
+    "body": "Dear Sir/Madam,\n\nWe were charged twice on 14 July ($120.00 each, ref TXN-99182 and TXN-99183). Please refund the duplicate and confirm in writing.\n\nRegards,\nAccounts Payable, Meridian Legal",
+    "received_at": "2026-07-20T11:02:00Z",
+    "expected_category": "billing",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m010",
+    "from": "spam-winner@lottery-intl.biz",
+    "subject": "CONGRATULATIONS! You are selected beneficiary",
+    "body": "Dear beneficiary, you have been selected to receive USD 4,500,000.00 from the international lottery commission. Kindly send your bank details.",
+    "received_at": "2026-07-20T11:20:00Z",
+    "expected_category": "spam"
+  },
+  {
+    "id": "m011",
+    "from": "tom@apexrenovations.com",
+    "subject": "cancel my subscription",
+    "body": "Please cancel my account effective immediately. The product is fine, we just went a different direction. Do I need to do anything on my end?\n\nTom Berger",
+    "received_at": "2026-07-20T11:45:00Z",
+    "expected_category": "cancellation"
+  },
+  {
+    "id": "m012",
+    "from": "priya.nair@techmatters.in",
+    "subject": "Feature request: bulk export",
+    "body": "Hello! Love the product. One thing that would save us hours: exporting all projects as a single zip instead of one by one. Is this on the roadmap?\n\nPriya",
+    "received_at": "2026-07-20T12:03:00Z",
+    "expected_category": "feedback"
+  },
+  {
+    "id": "m013",
+    "from": "recruiting@talentsphere.com",
+    "subject": "Senior engineers available for contract work",
+    "body": "Hi, we have pre-vetted senior engineers available at competitive rates. Would you be interested in a quick call to discuss your hiring needs?",
+    "received_at": "2026-07-20T12:30:00Z",
+    "expected_category": "cold_outreach"
+  },
+  {
+    "id": "m014",
+    "from": "lisa.chen@northwindretail.com",
+    "subject": "Urgent: data export before audit Friday",
+    "body": "Hi, our compliance audit is this Friday and I need a full export of our activity logs for the last 12 months. I can't find this option in settings. Can someone help me today or tomorrow?\n\nLisa Chen\nOps Manager, Northwind Retail",
+    "received_at": "2026-07-20T13:15:00Z",
+    "expected_category": "support",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m015",
+    "from": "greg@greggardens.net",
+    "subject": "thanks!",
+    "body": "Just wanted to say your support team sorted my issue in under an hour last week. Rare these days. Keep it up.\n\nGreg",
+    "received_at": "2026-07-20T13:40:00Z",
+    "expected_category": "feedback"
+  },
+  {
+    "id": "m016",
+    "from": "amelia.ford@stackbridge.io",
+    "subject": "Trial ending — can we extend?",
+    "body": "Hi, our trial ends in 2 days but our decision-maker is on leave until next week. Any chance of a 1-week extension? We're very likely to purchase the Team plan.\n\nAmelia",
+    "received_at": "2026-07-20T14:02:00Z",
+    "expected_category": "sales_inquiry",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m017",
+    "from": "security-alert@paypa1-verify.com",
+    "subject": "Your account has been limited - verify now",
+    "body": "Dear customer, unusual activity detected. Click here within 24 hours to verify your account or it will be permanently suspended.",
+    "received_at": "2026-07-20T14:18:00Z",
+    "expected_category": "spam"
+  },
+  {
+    "id": "m018",
+    "from": "d.okafor@lumenhealth.org",
+    "subject": "HIPAA / data residency questions",
+    "body": "Hello,\n\nWe're a healthcare nonprofit evaluating your platform. Before proceeding we need to know: where is data stored, do you sign BAAs, and is data encrypted at rest? Our security team requires written answers.\n\nDr. Daniel Okafor",
+    "received_at": "2026-07-20T14:55:00Z",
+    "expected_category": "sales_inquiry"
+  },
+  {
+    "id": "m019",
+    "from": "noreply@github.com",
+    "subject": "[repo] Build failed: main #4821",
+    "body": "Build #4821 on main failed. View the logs for details.",
+    "received_at": "2026-07-20T15:10:00Z",
+    "expected_category": "notification"
+  },
+  {
+    "id": "m020",
+    "from": "hannah@petalandstem.shop",
+    "subject": "you charged me after I cancelled??",
+    "body": "I cancelled my subscription on July 2nd and I was STILL charged on July 15th. This is unacceptable. I want my money back and confirmation that my card is removed from your system.",
+    "received_at": "2026-07-20T15:33:00Z",
+    "expected_category": "billing",
+    "expected_urgency": "high"
+  },
+  {
+    "id": "m021",
+    "from": "info@chamberofcommerce-eu.org",
+    "subject": "Invitation: SME Digital Summit, Sept 12",
+    "body": "You are invited to speak or attend the SME Digital Summit in Rotterdam. Early registration closes August 1.",
+    "received_at": "2026-07-20T16:01:00Z",
+    "expected_category": "cold_outreach"
+  },
+  {
+    "id": "m022",
+    "from": "ryan.kelly@fastlanelogistics.com",
+    "subject": "does the mobile app work offline",
+    "body": "quick one - our drivers are often out of signal. does the mobile app queue changes offline and sync later? dealbreaker for us if not.",
+    "received_at": "2026-07-20T16:20:00Z",
+    "expected_category": "sales_inquiry"
+  },
+  {
+    "id": "m023",
+    "from": "support@stripe.com",
+    "subject": "Your payout of $2,140.50 has been sent",
+    "body": "A payout of $2,140.50 was sent to your bank account ending 4471. It should arrive within 2 business days.",
+    "received_at": "2026-07-20T16:45:00Z",
+    "expected_category": "notification"
+  },
+  {
+    "id": "m024",
+    "from": "olga.petrova@midnightbakery.pl",
+    "subject": "invoice needed with VAT number",
+    "body": "Hello, I need my last invoice reissued with our company VAT number PL5213456789 — our accountant cannot process it otherwise. Order ref: ORD-5521.\n\nThank you, Olga",
+    "received_at": "2026-07-20T17:05:00Z",
+    "expected_category": "billing"
+  }
+]

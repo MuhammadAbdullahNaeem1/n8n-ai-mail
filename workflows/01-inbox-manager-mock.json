@@ -1,0 +1,635 @@
+{
+  "name": "AI Inbox Manager \u2014 Demo (Mock Inbox)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-manual",
+      "name": "Run Demo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/seed/emails/inbox.json",
+        "options": {}
+      },
+      "id": "read-inbox",
+      "name": "Read Seed Inbox",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "id": "extract-json",
+      "name": "Parse Inbox JSON",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize to one item per email regardless of how the JSON was parsed\nconst out = [];\nfor (const item of $input.all()) {\n  const d = item.json;\n  if (Array.isArray(d)) {\n    for (const e of d) out.push({ json: e });\n  } else if (Array.isArray(d.data)) {\n    for (const e of d.data) out.push({ json: e });\n  } else {\n    out.push({ json: d });\n  }\n}\n// Smoke-test mode: DEMO_SAMPLE_SIZE=6 processes only the first N emails.\n// Keeps API usage low while testing on free-tier keys. Unset/0 = full inbox.\nconst n = parseInt($env.DEMO_SAMPLE_SIZE || '0', 10);\nreturn n > 0 ? out.slice(0, n) : out;"
+      },
+      "id": "split-emails",
+      "name": "Split Emails",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const email = $json;\nconst system = 'You are an email triage engine for a company inbox. Classify the email into exactly one category: sales_inquiry, support, billing, cancellation, partnership, feedback, newsletter, notification, cold_outreach, spam, other.\\n' +\n  'Also assess urgency (high|normal|low), sentiment (positive|neutral|negative), whether a human-quality reply is needed (needs_reply), and write a one-line summary.\\n' +\n  'urgency=high when: outage or blocked work, an imminent deadline, refund dispute, legal threat, charge after cancellation, expiring trial with buying intent, or an angry repeat contact.\\n' +\n  'needs_reply=false for newsletter, notification, spam, and generic cold_outreach.\\n' +\n  'Respond with ONLY a JSON object, no markdown, no explanation: {\"category\":\"...\",\"urgency\":\"...\",\"sentiment\":\"...\",\"needs_reply\":true,\"summary\":\"...\",\"confidence\":0.0}';\nconst user = `From: ${email.from}\\nSubject: ${email.subject}\\n\\n${(email.body || '').slice(0, 6000)}`;\nreturn {\n  json: {\n    email,\n    body: {\n      model: $env.LLM_MODEL_CLASSIFY,\n      temperature: 0,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user }\n      ]\n    }\n  }\n};"
+      },
+      "id": "build-classify",
+      "name": "Build Classify Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LLM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 6500
+            }
+          }
+        }
+      },
+      "id": "llm-classify",
+      "name": "LLM: Classify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const email = $('Build Classify Request').item.json.email;\nlet raw = $json.choices?.[0]?.message?.content ?? '';\nraw = raw.replace(/```json|```/g, '').trim();\nlet c = {};\ntry { c = JSON.parse(raw); } catch (e) { /* fall through to defaults */ }\nconst VALID = ['sales_inquiry','support','billing','cancellation','partnership','feedback','newsletter','notification','cold_outreach','spam','other'];\nconst classification = {\n  category: VALID.includes(c.category) ? c.category : 'other',\n  urgency: ['high','normal','low'].includes(c.urgency) ? c.urgency : 'normal',\n  sentiment: ['positive','neutral','negative'].includes(c.sentiment) ? c.sentiment : 'neutral',\n  needs_reply: typeof c.needs_reply === 'boolean' ? c.needs_reply : true,\n  summary: typeof c.summary === 'string' ? c.summary : '',\n  confidence: typeof c.confidence === 'number' ? c.confidence : null\n};\nreturn { json: { ...email, classification } };"
+      },
+      "id": "parse-classify",
+      "name": "Parse Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.classification.needs_reply }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-needs-reply",
+      "name": "Needs Reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const email = $json;\nconst query = `${email.subject}\\n${(email.body || '').slice(0, 3000)}`;\nreturn { json: { body: { model: $env.EMBEDDING_MODEL, input: query } } };"
+      },
+      "id": "build-embed",
+      "name": "Build Embed Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LLM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "embed-query",
+      "name": "Embed Query",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.QDRANT_URL }}/collections/flowdesk_kb/points/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ vector: $json.data[0].embedding, limit: 4, with_payload: true }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "search-kb",
+      "name": "Search KB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        -120
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const item = $('Parse Classification').item.json;\nconst hits = ($json.result || [])\n  .map(r => `[source: ${r.payload.source}]\\n${r.payload.text}`)\n  .join('\\n\\n---\\n\\n');\nconst system = 'You draft email replies for Flowdesk customer support. Rules:\\n' +\n  '- Use ONLY facts found in the KNOWLEDGE BASE CONTEXT. Never invent policies, prices, features, or dates.\\n' +\n  '- If the answer is not in the context, write [CHECK: what a human must verify] in that spot.\\n' +\n  '- Tone: friendly, direct, no corporate filler. Apologize at most once, then focus on the fix and a concrete next step.\\n' +\n  '- Keep it under 150 words. Sign off as \"Flowdesk Support\".\\n' +\n  '- Output the reply body only \u2014 no subject line, no preamble.';\nconst user = `KNOWLEDGE BASE CONTEXT:\\n${hits || '(no relevant context found)'}\\n\\nINCOMING EMAIL:\\nFrom: ${item.from}\\nSubject: ${item.subject}\\n\\n${item.body}\\n\\nCLASSIFICATION: ${JSON.stringify(item.classification)}\\n\\nDraft the reply.`;\nreturn {\n  json: {\n    body: {\n      model: $env.LLM_MODEL_DRAFT,\n      temperature: 0.3,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user }\n      ]\n    }\n  }\n};"
+      },
+      "id": "build-draft",
+      "name": "Build Draft Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BASE_URL }}/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.LLM_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 90000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 12000
+            }
+          }
+        }
+      },
+      "id": "llm-draft",
+      "name": "LLM: Draft Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1160,
+        -120
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const base = $('Parse Classification').item.json;\nconst kb = $('Search KB').item.json;\nconst sources = (kb?.result || []).map(r => r.payload.source);\nconst draft = $json.choices?.[0]?.message?.content?.trim() || '';\n// If the LLM call failed (quota/rate limit/timeout), keep the triage result and\n// flag the draft for retry instead of losing the whole run.\nconst err = $json.error?.message || $json.error || (draft ? null : 'no draft returned');\nreturn { json: { ...base, draft_reply: draft,\n  draft_status: draft ? 'ok' : 'failed',\n  draft_error: draft ? null : String(err),\n  kb_status: kb?.result ? 'ok' : 'unavailable',\n  kb_sources: [...new Set(sources)] } };"
+      },
+      "id": "parse-draft",
+      "name": "Parse Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "options": {}
+      },
+      "id": "merge-branches",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1580,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all().map(i => i.json);\nconst by_category = {};\nfor (const r of results) {\n  const c = r.classification?.category || 'other';\n  by_category[c] = (by_category[c] || 0) + 1;\n}\nconst urgent = results\n  .filter(r => r.classification?.urgency === 'high')\n  .map(r => ({ id: r.id, from: r.from, subject: r.subject, summary: r.classification.summary }));\nreturn [{\n  json: {\n    run_at: new Date().toISOString(),\n    total: results.length,\n    drafted: results.filter(r => r.draft_reply).length,\n    by_category,\n    urgent,\n    results\n  }\n}];"
+      },
+      "id": "format-results",
+      "name": "Format Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1780,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {
+          "format": true
+        }
+      },
+      "id": "to-file",
+      "name": "Results \u2192 File",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/data/output/results.json",
+        "options": {}
+      },
+      "id": "write-results",
+      "name": "Write Results",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ ($env.SLACK_WEBHOOK_URL || '').length > 0 && $json.urgent.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-slack",
+      "name": "Urgent + Slack Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1980,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: '\ud83d\udea8 ' + $json.urgent.length + ' urgent email(s) need attention:\\n' + $json.urgent.map(u => '\u2022 ' + u.from + ' \u2014 ' + u.subject).join('\\n') }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "slack-alert",
+      "name": "Slack Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2180,
+        100
+      ]
+    }
+  ],
+  "connections": {
+    "Run Demo": {
+      "main": [
+        [
+          {
+            "node": "Read Seed Inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Seed Inbox": {
+      "main": [
+        [
+          {
+            "node": "Parse Inbox JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Inbox JSON": {
+      "main": [
+        [
+          {
+            "node": "Split Emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Emails": {
+      "main": [
+        [
+          {
+            "node": "Build Classify Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Classify Request": {
+      "main": [
+        [
+          {
+            "node": "LLM: Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Classify": {
+      "main": [
+        [
+          {
+            "node": "Parse Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Classification": {
+      "main": [
+        [
+          {
+            "node": "Needs Reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Reply?": {
+      "main": [
+        [
+          {
+            "node": "Build Embed Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Build Embed Request": {
+      "main": [
+        [
+          {
+            "node": "Embed Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed Query": {
+      "main": [
+        [
+          {
+            "node": "Search KB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search KB": {
+      "main": [
+        [
+          {
+            "node": "Build Draft Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Draft Request": {
+      "main": [
+        [
+          {
+            "node": "LLM: Draft Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM: Draft Reply": {
+      "main": [
+        [
+          {
+            "node": "Parse Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Draft": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Format Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Results": {
+      "main": [
+        [
+          {
+            "node": "Results \u2192 File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Urgent + Slack Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Results \u2192 File": {
+      "main": [
+        [
+          {
+            "node": "Write Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgent + Slack Configured?": {
+      "main": [
+        [
+          {
+            "node": "Slack Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "MyaBiI9oScZtwDlb"
+}
