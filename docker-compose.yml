@@ -61,6 +61,8 @@ services:
       # Narrow by default — this runs against a real inbox.
       GMAIL_QUERY: ${GMAIL_QUERY:-is:unread newer_than:1d}
       GMAIL_FETCH_LIMIT: ${GMAIL_FETCH_LIMIT:-5}
+      # Demo seeder (workflow 04): how many seed emails to inject. 0 = all 24.
+      DEMO_SEED_COUNT: ${DEMO_SEED_COUNT:-0}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     volumes:
       - n8n_data:/home/node/.n8n

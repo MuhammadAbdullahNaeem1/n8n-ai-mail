@@ -1,6 +1,6 @@
 [
   {
-    "run_at": "2026-07-21T13:00:14.508Z",
+    "run_at": "2026-07-21T21:47:57.901Z",
     "total": 6,
     "drafted": 4,
     "by_category": {
@@ -46,12 +46,13 @@
           "summary": "Prospective customer requesting annual pricing for 25 seats with SSO and priority support requirements.",
           "confidence": 1
         },
-        "draft_reply": "Hi Sarah,\n\nThanks for reaching out. For a team of 25, you would be looking at our Team plan, which includes SSO, audit logs, and priority support with a 4-hour response SLA.\n\nThe standard Team plan is $39/user/month. Since you are looking for 25 seats, you qualify for our volume discounts. I have looped in our sales team to provide a custom annual quote for you, which will include the 17% discount for annual billing. \n\n[CHECK: when the sales team will follow up with the quote].\n\nIn the meantime, you can start a 14-day free trial of the Team plan directly from our website to test the features. Let me know if you have any other questions.\n\nBest,\n\nFlowdesk Support",
+        "draft_reply": "Hi Sarah,\n\nThanks for reaching out! \n\nFor 25 seats, you qualify for our volume discounts. Since volume discounts start at 20 seats, our sales team can quote custom annual pricing for you. \n\nRegarding your feature requirements, SSO and priority support are included in our Team plan ($39/user/month standard, before volume discounts). \n\nI've flagged this over to our sales team so they can get that custom quote over to you. You can expect to hear back from them today.\n\nBest,\n\nFlowdesk Support",
         "draft_status": "ok",
         "draft_error": null,
         "kb_status": "ok",
         "kb_sources": [
-          "unknown"
+          "product-faq.md",
+          "support-policies.md"
         ]
       },
       {
@@ -70,12 +71,13 @@
           "summary": "User is unable to log in despite password resets and requires urgent access for a presentation tomorrow.",
           "confidence": 1
         },
-        "draft_reply": "Hi Mike,\n\nI’m sorry for the frustration this login issue has caused, especially with your presentation tomorrow. Since you've already reset your password, please try these steps to resolve the \"invalid credentials\" error:\n\n1. Confirm you are using the exact email address associated with your account, as aliases will not work for password resets.\n2. Clear your browser’s cached credentials or try logging in via an incognito window.\n\nIf you are still unable to access your account after trying these, please let me know immediately. I have flagged this as urgent, and if the account shows a `locked` flag, I will escalate this to our engineering team right away. \n\nFlowdesk Support",
+        "draft_reply": "Hi Mike,\n\nI'm sorry for the frustration and the delay in getting back to you. Let's get you into your account right away. \n\nSince password resets haven't worked, first please confirm you are using the exact email address tied to your account, rather than an alias. Then, try clearing your cached credentials or opening Flowdesk in an incognito window. \n\nIf you still can't log in, let me know right away so I can check your account for a locked flag [CHECK: account status and engineering escalation]. \n\nFlowdesk Support",
         "draft_status": "ok",
         "draft_error": null,
         "kb_status": "ok",
         "kb_sources": [
-          "unknown"
+          "support-policies.md",
+          "billing-refunds.md"
         ]
       },
       {
@@ -93,12 +95,13 @@
           "summary": "Dana from Raven Creative Agency is proposing a referral partnership and requesting a brief introductory call.",
           "confidence": 0.98
         },
-        "draft_reply": "Hi Dana,\n\nThanks for reaching out! We appreciate your interest in partnering with us.\n\nRegarding your request for a referral partnership and a call, [CHECK: whether Flowdesk currently has a formal referral program or if the team is available for introductory calls]. \n\nI’ve passed your details along to our partnerships team for review. They will be in touch if there is an opportunity to collaborate.\n\nBest,\n\nFlowdesk Support",
+        "draft_reply": "Hi Dana,\n\nThanks for reaching out! We'd love to chat about a referral partnership. \n\n[CHECK: what a human must verify about our partnership process and availability for a call]\n\nTalk soon,\n\nFlowdesk Support",
         "draft_status": "ok",
         "draft_error": null,
         "kb_status": "ok",
         "kb_sources": [
-          "unknown"
+          "support-policies.md",
+          "product-faq.md"
         ]
       },
       {
@@ -117,12 +120,14 @@
           "summary": "Customer reporting API webhook failure for account vx-2291 since yesterday.",
           "confidence": 1
         },
-        "draft_reply": "Hi Carlos,\n\nI’m sorry to hear your webhooks have stopped firing.\n\nI have checked your account dispatch logs. A common cause for this is that endpoints failing 5+ times in a 24-hour period are automatically paused by our system. Please check the admin panel under Account > Events to see if your endpoint is currently paused; if so, you can re-enable it directly from there.\n\nIf the dispatch log shows no events are being generated at all, please let me know. I will then escalate your account ID (vx-2291) to our engineering team for a deeper investigation.\n\nFlowdesk Support",
+        "draft_reply": "Hi Carlos,\n\nThanks for reaching out. Let's get this webhook sorted out. \n\nI've checked your account dispatch logs for ID `vx-2291`. [CHECK: whether events are appearing in the webhook dispatch log or if endpoints were auto-paused due to failures]\n\nIf the dispatch log shows no events generated, we'll need to escalate this to engineering. In the meantime, please check your admin panel under account events to confirm if the endpoint was auto-paused after failing 5+ times in 24 hours. \n\nLet me know what you see there and we'll take the next step.\n\nFlowdesk Support",
         "draft_status": "ok",
         "draft_error": null,
         "kb_status": "ok",
         "kb_sources": [
-          "unknown"
+          "support-policies.md",
+          "security-compliance.md",
+          "product-faq.md"
         ]
       },
       {

@@ -1,0 +1,299 @@
+{
+  "id": "GmailDemoSeed01",
+  "name": "AI Inbox Manager — Demo Seed (Gmail)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1 · Labels\nCreate the label taxonomy. Idempotent — existing labels are skipped.",
+        "height": 250,
+        "width": 1160,
+        "color": 4
+      },
+      "id": "sticky-seed-0",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -130
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2 · Seed the inbox\nRead the 24 seed emails and insert them with their original From: headers.",
+        "height": 250,
+        "width": 940,
+        "color": 6
+      },
+      "id": "sticky-seed-1",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        190
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "seed-trigger",
+      "name": "Run Setup",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "seed-profile",
+      "name": "Get Profile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The full label taxonomy the demo needs. Creating \"AI/Sales\" also\n// creates the \"AI\" parent automatically on Gmail's side.\nconst LABELS = [\n  \"ai-triage\",\n  \"AI/Sales\",\n  \"AI/Support\",\n  \"AI/Billing\",\n  \"AI/Cancellation\",\n  \"AI/Partnership\",\n  \"AI/Feedback\",\n  \"AI/Newsletter\",\n  \"AI/Notification\",\n  \"AI/Cold Outreach\",\n  \"AI/Spam\",\n  \"AI/Other\",\n  \"AI/Urgent\",\n  \"AI/Needs Review\",\n  \"AI/No Reply Needed\"\n];\nreturn LABELS.map(name => ({ json: {\n  name,\n  labelListVisibility: 'labelShow',\n  messageListVisibility: 'show',\n} }));"
+      },
+      "id": "seed-plan",
+      "name": "Plan Labels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ name: $json.name, labelListVisibility: $json.labelListVisibility, messageListVisibility: $json.messageListVisibility }) }}"
+      },
+      "id": "seed-mklabel",
+      "name": "Create Label",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "seed-getlabels",
+      "name": "Get Labels (final)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "fileSelector": "/data/seed/emails/inbox.json",
+        "options": {}
+      },
+      "id": "seed-read",
+      "name": "Read Seed Inbox",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        0,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "id": "seed-parse",
+      "name": "Parse Seed Inbox",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        220,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn each seed email into an RFC-822 message Gmail can insert directly.\n// insert (not send) means the mail keeps its original From: header, so the\n// demo inbox looks like real customer mail rather than 24 notes to yourself.\nconst byName = {};\nfor (const l of ($('Get Labels (final)').first().json.labels || [])) byName[l.name] = l.id;\nconst me = $('Get Profile').first().json.emailAddress;\n\n// Seed file may arrive as a bare array or wrapped under .data\nconst emails = [];\nfor (const item of $input.all()) {\n  const d = item.json;\n  if (Array.isArray(d)) emails.push(...d);\n  else if (Array.isArray(d.data)) emails.push(...d.data);\n  else emails.push(d);\n}\n\nconst n = parseInt($env.DEMO_SEED_COUNT || '0', 10);\n// DEMO_SEED_COUNT=-1 -> labels-only pass. Lets you add or rename labels\n// without injecting a second copy of the 24 seed emails.\nif (n < 0) return [];\nconst list = n > 0 ? emails.slice(0, n) : emails;\n\nconst triage = byName['ai-triage'];\nconst out = [];\nfor (const e of list) {\n  const local = String(e.from || 'unknown@example.com').split('@')[0];\n  const display = local.replace(/[._-]+/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());\n  const date = new Date(e.received_at || Date.now()).toUTCString();\n  const headers = [\n    'From: ' + display + ' <' + e.from + '>',\n    'To: ' + me,\n    'Subject: ' + String(e.subject || '(no subject)'),\n    'Date: ' + date,\n    'MIME-Version: 1.0',\n    'Content-Type: text/plain; charset=\"UTF-8\"',\n    'Content-Transfer-Encoding: 7bit',\n  ].join('\\r\\n');\n  const raw = headers + '\\r\\n\\r\\n' + String(e.body || '');\n  const b64 = Buffer.from(raw, 'utf8').toString('base64')\n    .replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');\n  const labelIds = ['INBOX', 'UNREAD'];\n  if (triage) labelIds.push(triage);\n  out.push({ json: { seed_id: e.id, subject: e.subject, from: e.from, raw: b64, labelIds } });\n}\nreturn out;"
+      },
+      "id": "seed-build",
+      "name": "Build Raw Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/messages?internalDateSource=dateHeader",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ raw: $json.raw, labelIds: $json.labelIds }) }}"
+      },
+      "id": "seed-insert",
+      "name": "Insert Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        320
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Run Setup": {
+      "main": [
+        [
+          {
+            "node": "Get Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Profile": {
+      "main": [
+        [
+          {
+            "node": "Plan Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Labels": {
+      "main": [
+        [
+          {
+            "node": "Create Label",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Label": {
+      "main": [
+        [
+          {
+            "node": "Get Labels (final)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Labels (final)": {
+      "main": [
+        [
+          {
+            "node": "Read Seed Inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Seed Inbox": {
+      "main": [
+        [
+          {
+            "node": "Parse Seed Inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Seed Inbox": {
+      "main": [
+        [
+          {
+            "node": "Build Raw Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Raw Messages": {
+      "main": [
+        [
+          {
+            "node": "Insert Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

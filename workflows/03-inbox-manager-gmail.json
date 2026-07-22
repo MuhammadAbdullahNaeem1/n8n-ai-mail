@@ -1,6 +1,86 @@
 {
-  "name": "AI Inbox Manager \u2014 Gmail (Live Inbox)",
+  "name": "AI Inbox Manager — Gmail (Live Inbox)",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## 1 · Intake\nTrigger, fetch from Gmail, flatten into a common shape.",
+        "height": 250,
+        "width": 720,
+        "color": 3
+      },
+      "id": "sticky-row-0",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -130
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2 · Triage\nClassify with the LLM, then branch on whether a reply is owed.",
+        "height": 250,
+        "width": 940,
+        "color": 5
+      },
+      "id": "sticky-row-1",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        190
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3 · Draft (RAG)\nEmbed the email, search the knowledge base, write a grounded reply.",
+        "height": 250,
+        "width": 1380,
+        "color": 4
+      },
+      "id": "sticky-row-2",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        510
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 4 · Collect\nRejoin both branches and summarise the run.",
+        "height": 250,
+        "width": 940,
+        "color": 6
+      },
+      "id": "sticky-row-3",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        830
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5 · Write back to Gmail\nResolve label names to IDs, apply them, then create drafts where one exists.",
+        "height": 250,
+        "width": 1380,
+        "color": 7
+      },
+      "id": "sticky-row-4",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        1150
+      ]
+    },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
@@ -11,8 +91,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -440,
-        0
+        0,
+        320
       ]
     },
     {
@@ -50,8 +130,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -240,
-        0
+        220,
+        320
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -67,8 +147,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -40,
-        0
+        440,
+        320
       ]
     },
     {
@@ -99,8 +179,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        160,
-        0
+        660,
+        320
       ]
     },
     {
@@ -113,8 +193,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        360,
-        -120
+        0,
+        640
       ]
     },
     {
@@ -152,8 +232,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        560,
-        -120
+        220,
+        640
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -176,23 +256,23 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        760,
-        -120
+        440,
+        640
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const item = $('Parse Classification').item.json;\nconst hits = ($json.result || [])\n  .map(r => `[source: ${r.payload.source}]\\n${r.payload.text}`)\n  .join('\\n\\n---\\n\\n');\nconst system = 'You draft email replies for Flowdesk customer support. Rules:\\n' +\n  '- Use ONLY facts found in the KNOWLEDGE BASE CONTEXT. Never invent policies, prices, features, or dates.\\n' +\n  '- If the answer is not in the context, write [CHECK: what a human must verify] in that spot.\\n' +\n  '- Tone: friendly, direct, no corporate filler. Apologize at most once, then focus on the fix and a concrete next step.\\n' +\n  '- Keep it under 150 words. Sign off as \"Flowdesk Support\".\\n' +\n  '- Output the reply body only \u2014 no subject line, no preamble.';\nconst user = `KNOWLEDGE BASE CONTEXT:\\n${hits || '(no relevant context found)'}\\n\\nINCOMING EMAIL:\\nFrom: ${item.from}\\nSubject: ${item.subject}\\n\\n${item.body}\\n\\nCLASSIFICATION: ${JSON.stringify(item.classification)}\\n\\nDraft the reply.`;\nreturn {\n  json: {\n    body: {\n      model: $env.LLM_MODEL_DRAFT,\n      temperature: 0.3,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user }\n      ]\n    }\n  }\n};"
+        "jsCode": "const item = $('Parse Classification').item.json;\nconst hits = ($json.result || [])\n  .map(r => `[source: ${r.payload.source}]\\n${r.payload.text}`)\n  .join('\\n\\n---\\n\\n');\nconst system = 'You draft email replies for Flowdesk customer support. Rules:\\n' +\n  '- Use ONLY facts found in the KNOWLEDGE BASE CONTEXT. Never invent policies, prices, features, or dates.\\n' +\n  '- If the answer is not in the context, write [CHECK: what a human must verify] in that spot.\\n' +\n  '- Tone: friendly, direct, no corporate filler. Apologize at most once, then focus on the fix and a concrete next step.\\n' +\n  '- Keep it under 150 words. Sign off as \"Flowdesk Support\".\\n' +\n  '- Output the reply body only — no subject line, no preamble.';\nconst user = `KNOWLEDGE BASE CONTEXT:\\n${hits || '(no relevant context found)'}\\n\\nINCOMING EMAIL:\\nFrom: ${item.from}\\nSubject: ${item.subject}\\n\\n${item.body}\\n\\nCLASSIFICATION: ${JSON.stringify(item.classification)}\\n\\nDraft the reply.`;\nreturn {\n  json: {\n    body: {\n      model: $env.LLM_MODEL_DRAFT,\n      temperature: 0.3,\n      messages: [\n        { role: 'system', content: system },\n        { role: 'user', content: user }\n      ]\n    }\n  }\n};"
       },
       "id": "build-draft",
       "name": "Build Draft Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        960,
-        -120
+        660,
+        640
       ]
     },
     {
@@ -230,8 +310,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1160,
-        -120
+        880,
+        640
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -248,8 +328,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1360,
-        -120
+        1100,
+        640
       ]
     },
     {
@@ -262,8 +342,8 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
-        1580,
-        0
+        0,
+        960
       ]
     },
     {
@@ -275,8 +355,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1780,
-        0
+        220,
+        960
       ]
     },
     {
@@ -307,8 +387,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1980,
-        100
+        440,
+        960
       ]
     },
     {
@@ -317,7 +397,7 @@
         "url": "={{ $env.SLACK_WEBHOOK_URL }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ text: '\ud83d\udea8 ' + $json.urgent.length + ' urgent email(s) need attention:\\n' + $json.urgent.map(u => '\u2022 ' + u.from + ' \u2014 ' + u.subject).join('\\n') }) }}",
+        "jsonBody": "={{ JSON.stringify({ text: '🚨 ' + $json.urgent.length + ' urgent email(s) need attention:\\n' + $json.urgent.map(u => '• ' + u.from + ' — ' + u.subject).join('\\n') }) }}",
         "options": {
           "timeout": 15000
         }
@@ -327,8 +407,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2180,
-        100
+        660,
+        960
       ]
     },
     {
@@ -338,8 +418,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        -1440,
-        80
+        0,
+        0
       ]
     },
     {
@@ -362,8 +442,8 @@
       "type": "n8n-nodes-base.gmailTrigger",
       "typeVersion": 1.2,
       "position": [
-        -1440,
-        -120
+        0,
+        -150
       ],
       "disabled": true,
       "credentials": {
@@ -390,8 +470,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        -1240,
-        80
+        220,
+        0
       ],
       "credentials": {
         "gmailOAuth2": {
@@ -403,40 +483,16 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "// Normalize a Gmail message into the same shape the mock workflow uses,\n// so every downstream node is identical between the demo and live versions.\nconst m = $json;\nconst headers = {};\nfor (const h of (m.payload?.headers || [])) headers[h.name.toLowerCase()] = h.value;\nconst stripHtml = (s) => s.replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n                          .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n                          .replace(/<[^>]+>/g, ' ')\n                          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')\n                          .replace(/\\s+/g, ' ').trim();\nlet body = m.text || '';\nif (!body && m.html) body = stripHtml(m.html);\nif (!body) body = m.snippet || '';\nreturn { json: {\n  id: m.id,\n  threadId: m.threadId,\n  from: headers.from || '(unknown sender)',\n  to: headers.to || '',\n  subject: headers.subject || '(no subject)',\n  body: body.slice(0, 8000),\n  received_at: headers.date || null\n} };"
+        "jsCode": "// Normalize a Gmail message into the same shape the mock workflow uses,\n// so every downstream node is identical between the demo and live versions.\n//\n// The Gmail node (simple:false) hands back PARSED fields at the top level:\n//   subject -> string\n//   from/to -> mailparser objects: { value: [{ address, name }], text, html }\n//   text/html -> body\n// The raw Gmail API instead nests payload.headers as [{name,value}]. Handle\n// both, so this works behind the polling trigger as well as the fetch node.\nconst m = $json;\n\nconst stripHtml = (s) => String(s)\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')\n  .replace(/\\s+/g, ' ').trim();\n\n// Raw-API fallback: payload.headers as an array of {name, value}\nconst raw = {};\nif (Array.isArray(m.payload && m.payload.headers)) {\n  for (const h of m.payload.headers) raw[String(h.name).toLowerCase()] = h.value;\n}\n\n// Pull a bare address out of whatever shape we were given.\nfunction addressOf(v) {\n  if (!v) return '';\n  if (typeof v === 'string') {\n    const hit = v.match(/<([^>]+)>/);\n    return (hit ? hit[1] : v).trim();\n  }\n  const first = (v.value && v.value[0]) || null;\n  if (first && first.address) return String(first.address).trim();\n  const text = String(v.text || '');\n  const hit = text.match(/<([^>]+)>/);\n  return (hit ? hit[1] : text).trim();\n}\n\nfunction displayName(v) {\n  if (!v) return '';\n  if (typeof v === 'string') return v;\n  const first = (v.value && v.value[0]) || null;\n  if (first && first.name) return String(first.name);\n  return addressOf(v);\n}\n\nlet body = m.text || '';\nif (!body && m.html) body = stripHtml(m.html);\nif (!body) body = m.snippet || '';\n\nconst fromEmail = addressOf(m.from) || addressOf(raw.from);\nconst subject = m.subject || raw.subject || '(no subject)';\nconst receivedAt = m.date || raw.date || null;\n\nreturn { json: {\n  id: m.id,\n  threadId: m.threadId,\n  from: fromEmail || '(unknown sender)',\n  from_name: displayName(m.from) || fromEmail,\n  to: addressOf(m.to) || addressOf(raw.to),\n  subject,\n  body: String(body).slice(0, 8000),\n  received_at: receivedAt,\n} };"
       },
       "id": "normalize-gmail",
       "name": "Normalize Gmail Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1040,
+        440,
         0
       ]
-    },
-    {
-      "parameters": {
-        "resource": "message",
-        "operation": "addLabels",
-        "messageId": "={{ $json.id }}",
-        "labelIds": []
-      },
-      "id": "gmail-label",
-      "name": "Gmail: Apply Label",
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.1,
-      "position": [
-        1560,
-        160
-      ],
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "GMAIL_CRED",
-          "name": "Gmail account"
-        }
-      },
-      "onError": "continueRegularOutput",
-      "notes": "Pick your labels in the UI. Suggested: one per category (AI/Sales, AI/Support, AI/Billing...)."
     },
     {
       "parameters": {
@@ -466,8 +522,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1360,
-        240
+        880,
+        1280
       ]
     },
     {
@@ -487,8 +543,8 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1560,
-        320
+        1100,
+        1280
       ],
       "credentials": {
         "gmailOAuth2": {
@@ -498,6 +554,85 @@
       },
       "onError": "continueRegularOutput",
       "notes": "Creates a DRAFT only. Never sends. A human reviews and presses send."
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://gmail.googleapis.com/gmail/v1/users/me/labels",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "options": {}
+      },
+      "id": "gmail-labels-list",
+      "name": "Fetch Gmail Labels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        1280
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      },
+      "notes": "Label IDs are account-specific, so resolve names -> IDs at run time."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide which labels this email earns, from the classification the LLM produced.\n// Category label + a status label (drafted vs not) + urgency flag.\nconst email = $('Merge').item.json;\nconst byName = {};\nfor (const l of ($json.labels || [])) byName[l.name] = l.id;\n\nconst CATEGORY_LABEL = {\n  sales_inquiry: 'AI/Sales',\n  support:       'AI/Support',\n  billing:       'AI/Billing',\n  cancellation:  'AI/Cancellation',\n  partnership:   'AI/Partnership',\n  feedback:      'AI/Feedback',\n  newsletter:    'AI/Newsletter',\n  notification:  'AI/Notification',\n  cold_outreach: 'AI/Cold Outreach',\n  spam:          'AI/Spam',\n  other:         'AI/Other',\n};\n\nconst c = email.classification || {};\nconst hasDraft = !!(email.draft_reply && String(email.draft_reply).trim());\n\nconst names = [];\nnames.push(CATEGORY_LABEL[c.category] || 'AI/Other');\nnames.push(hasDraft ? 'AI/Needs Review' : 'AI/No Reply Needed');\nif (c.urgency === 'high') names.push('AI/Urgent');\n\nconst addLabelIds = names.map(n => byName[n]).filter(Boolean);\n\n// Drop the intake label so a re-run never processes the same mail twice.\nconst removeLabelIds = byName['ai-triage'] ? [byName['ai-triage']] : [];\n\nreturn { json: { ...email, applied_labels: names, addLabelIds, removeLabelIds, has_draft: hasDraft } };",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "gmail-resolve-labels",
+      "name": "Resolve Labels",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        1280
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://gmail.googleapis.com/gmail/v1/users/me/messages/{{ $json.id }}/modify",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gmailOAuth2",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ addLabelIds: $json.addLabelIds, removeLabelIds: $json.removeLabelIds }) }}",
+        "options": {}
+      },
+      "id": "gmail-apply-labels",
+      "name": "Gmail: Apply Labels",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        1280
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "FdzfwgorpdokGgH1",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The modify call returns the Gmail message resource, which would clobber our\n// item. Put the enriched email back so the draft nodes still see their fields.\nreturn { json: $('Resolve Labels').item.json };",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "gmail-restore",
+      "name": "Restore Item",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        1280
+      ]
     }
   ],
   "connections": {
@@ -622,12 +757,7 @@
       "main": [
         [
           {
-            "node": "Gmail: Apply Label",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Has Draft?",
+            "node": "Fetch Gmail Labels",
             "type": "main",
             "index": 0
           },
@@ -716,6 +846,50 @@
           }
         ],
         []
+      ]
+    },
+    "Fetch Gmail Labels": {
+      "main": [
+        [
+          {
+            "node": "Resolve Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Labels": {
+      "main": [
+        [
+          {
+            "node": "Gmail: Apply Labels",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail: Apply Labels": {
+      "main": [
+        [
+          {
+            "node": "Restore Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Item": {
+      "main": [
+        [
+          {
+            "node": "Has Draft?",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
